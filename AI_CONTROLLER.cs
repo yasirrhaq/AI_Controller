@@ -68,7 +68,6 @@ public class AI_CONTROLLER : MonoBehaviour {
 
     public float searchingFaseDuration = 5f;
     public float attackingFaseDuration = 6f;
-    public float maxDistanceToEnemy = 14f;
     float searchingFaseTimer;
     float attackingFaseTimer;
     bool shooting;
@@ -247,21 +246,21 @@ public class AI_CONTROLLER : MonoBehaviour {
                     tankController.Move(1);
                 }
             }
-            else if (attackingFase == YasirAttackingFase.HitAndRun)
-            {
-                Vector3 heading = tankController._infEnemyLastPos - transform.position;
-                Vector3 perp = Vector3.Cross(transform.forward, heading);
+            //else if (attackingFase == YasirAttackingFase.HitAndRun)
+            //{
+            //    Vector3 heading = tankController._infEnemyLastPos - transform.position;
+            //    Vector3 perp = Vector3.Cross(transform.forward, heading);
 
-                float dir = Vector3.Dot(perp, transform.up);
+            //    float dir = Vector3.Dot(perp, transform.up);
                 
-                if (Vector3.Distance(transform.position, tankController._infEnemyLastPos) < maxDistanceToEnemy)
-                {
-                    tankController.Move(1);
-                }
+            //    if (Vector3.Distance(transform.position, tankController._infEnemyLastPos) < maxDistanceToEnemy)
+            //    {
+            //        tankController.Move(1);
+            //    }
 
-                tankController.Shoot();
-                shooting = true;
-            }
+            //    tankController.Shoot();
+            //    shooting = true;
+            //}
         }
     }
 }
@@ -281,5 +280,4 @@ public enum YasirSearchingFase
 public enum YasirAttackingFase
 {
     StraightShoot,
-    HitAndRun
 }
