@@ -57,15 +57,22 @@ public class AI_CONTROLLER : MonoBehaviour {
     public bool enemyDetected;
     private Vector3 currentFacingWall;
     bool isTurning;
+    bool inFrontOfWall;
 
     public float thinkingDelay = 1;
     float thinkingTimer;
 
     public YasirTankFase tankFase;
     public YasirSearchingFase searchingFase;
+    public YasirAttackingFase attackingFase;
 
     public float searchingFaseDuration = 5f;
+    public float attackingFaseDuration = 6f;
+    public float maxDistanceToEnemy = 14f;
     float searchingFaseTimer;
+    float attackingFaseTimer;
+    bool shooting;
+    bool evadingWall;
 
     // Use this for initialization
     void Start () {
@@ -82,7 +89,22 @@ public class AI_CONTROLLER : MonoBehaviour {
         tankController.rig.velocity = Vector2.zero; //disarankan jgn dihapus agar tank anda tidak jalan terus krn velocity, silahkan dihapus jika anda mengerti apa yg anda lakukan 
 
         enemyDetected = tankController._infIsEnemySeen;
-        tankController.Shoot();
+
+        for (int i = 0; i < tankController._infLastposWall.Count; i++)
+        {
+            Vector3 wallPos = tankController._infLastposWall[i];
+            Vector3 heading = wallPos - transform.position;
+            if (Vector3.Dot(heading, tankController._infdirection.normalized) > 0.9 && Vector3.Distance(transform.position, wallPos) < maxDistanceToWall)
+            {
+                currentFacingWall = wallPos;
+                inFrontOfWall = true;
+                break;
+            }
+            else
+            {
+                inFrontOfWall = false;
+            }
+        }
 
         if (thinkingTimer > 0)
         {
@@ -92,8 +114,8 @@ public class AI_CONTROLLER : MonoBehaviour {
         {
             if (enemyDetected)
             {
-                tankFase = YasirTankFase.Chasing;
-            } else
+                tankFase = YasirTankFase.Attacking;
+            } else if (!evadingWall)
             {
                 tankFase = YasirTankFase.Searching;
             }
@@ -130,23 +152,20 @@ public class AI_CONTROLLER : MonoBehaviour {
 
                 if (!enemyDetected)
                 {
-                    for (int i = 0; i < tankController._infLastposWall.Count; i++)
+                    if (inFrontOfWall)
                     {
-                        Vector3 wallPos = tankController._infLastposWall[i];
-                        Vector3 heading = wallPos - transform.position;
-                        if (Vector3.Dot(heading, tankController._infdirection.normalized) > 0.9 && Vector3.Distance(transform.position, wallPos) < maxDistanceToWall)
-                        {
-                            currentFacingWall = wallPos;
+                        tankController.Turn(1);
 
-                            tankController.Turn(1);
-
-                            isTurning = true;
-                        }
-                        else
-                        {
-                            isTurning = false;
-                        }
+                        isTurning = true;
                     }
+                    else
+                    {
+                        isTurning = false;
+                    }
+                }
+                else if (enemyDetected)
+                {
+                    searchingFase = YasirSearchingFase.Moving;
                 }   
             }
             else if (searchingFase == YasirSearchingFase.Rotating)
@@ -154,22 +173,94 @@ public class AI_CONTROLLER : MonoBehaviour {
                 tankController.Turn(-1);
                 if (enemyDetected)
                 {
-                    tankFase = YasirTankFase.Chasing;
+                    tankFase = YasirTankFase.Attacking;
                 }
             }
         }
-        else if(tankFase == YasirTankFase.Chasing)
+        else if(tankFase == YasirTankFase.Attacking)
         {
-            Vector3 heading = tankController._infEnemyLastPos - transform.position;
-            Vector3 perp = Vector3.Cross(transform.forward, heading);
-            float dir = Vector3.Dot(perp, transform.up);
+            if (shooting)
+            {
+                if (attackingFaseTimer > 0)
+                {
+                    attackingFaseTimer -= Time.deltaTime;
+                }
+                else
+                {
+                    attackingFaseTimer = attackingFaseDuration;
 
-            if (dir > 0.2f)
+                    //if (attackingFase == YasirAttackingFase.StraightShoot)
+                    //{
+                    //    attackingFase = YasirAttackingFase.HitAndRun;
+                    //}
+                    //else
+                    //{
+                    //    attackingFase = YasirAttackingFase.StraightShoot;
+                    //}
+
+                    evadingWall = false;
+                    shooting = false;
+                }
+            }
+
+            if (attackingFase == YasirAttackingFase.StraightShoot)
             {
-                tankController.Turn(1);
-            } else if (dir < -.2f)
+                Vector3 heading = tankController._infEnemyLastPos - transform.position;
+                Vector3 perp = Vector3.Cross(transform.forward, heading);
+
+                if (inFrontOfWall)
+                {
+                    heading = currentFacingWall - transform.position;
+                    perp = Vector3.Cross(transform.forward, heading);
+                    evadingWall = true;
+                }
+
+                float dir = Vector3.Dot(perp, transform.up);
+
+                if (!inFrontOfWall)
+                {
+                    if (dir > 0.2f)
+                    {
+                        tankController.Turn(1);
+                    }
+                    else if (dir < -.2f)
+                    {
+                        tankController.Turn(-1);
+                    }
+                    else if (dir <= 0.2f && dir >= -0.2f)
+                    {
+                        tankController.Shoot();
+                        shooting = true;
+                    }
+                }
+                else
+                {
+                    if (dir > 0.2f)
+                    {
+                        tankController.Turn(-1);
+                    }
+                    else if (dir < -.2f)
+                    {
+                        tankController.Turn(1);
+                    }
+
+                    tankController.Move(1);
+                }
+            }
+            else if (attackingFase == YasirAttackingFase.HitAndRun)
             {
-                tankController.Turn(-1);
+                Vector3 heading = tankController._infEnemyLastPos - transform.position;
+                Vector3 perp = Vector3.Cross(transform.forward, heading);
+
+                float dir = Vector3.Dot(perp, transform.up);
+                
+                if (Vector3.Distance(transform.position, tankController._infEnemyLastPos) < maxDistanceToEnemy)
+                {
+                    tankController.Move(1);
+                }
+
+                tankController.Shoot();
+                shooting = true;
             }
         }
     }
@@ -178,11 +269,17 @@ public class AI_CONTROLLER : MonoBehaviour {
 public enum YasirTankFase
 {
     Searching,
-    Chasing,
+    Attacking,
 }
 
 public enum YasirSearchingFase
 {
     Moving,
     Rotating
+}
+
+public enum YasirAttackingFase
+{
+    StraightShoot,
+    HitAndRun
 }
