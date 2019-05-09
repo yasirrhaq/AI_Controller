@@ -66,7 +66,7 @@ public class AI_CONTROLLER : MonoBehaviour {
     public YasirSearchingFase searchingFase;
     public YasirAttackingFase attackingFase;
 
-    public float searchingFaseDuration = 5f;
+    public float searchingFaseDuration = 3f;
     public float attackingFaseDuration = 6f;
     float searchingFaseTimer;
     float attackingFaseTimer;
